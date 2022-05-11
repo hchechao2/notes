@@ -2,6 +2,8 @@
 #define EVENT_LOOP_H
 
 #include <pthread.h>
+#include <string>
+#include <unordered_map>
 #include "tcp/channel.h"
 #include "event/event_dispatcher.h"
 #include "utils/common.h"
@@ -11,7 +13,7 @@ extern  struct event_dispatcher epoll_dispatcher;
 
 class ChannelElement {
 private:
-    int type; //1: add  2: delete
+    int type; //1: add  2: delete 3:update
     Channel *channel;
     ChannelElement *next;
 };
@@ -19,18 +21,18 @@ private:
 class EventLoop {
 public:
     
-    EventLoop(char * thread_name=nullptr);
+    EventLoop(string name="main thread");
     
     int run();
     void wakeup();
     
-    //通过调用do_channel_event来间接调用handle_pending_channel
+    //通过调用do_channel_event
     int add_channel_event(int fd, struct channel *channel1);
     int remove_channel_event(int fd, struct channel *channel1);
     int update_channel_event(int fd, struct channel *channel1);
 
     //每次循环结束后 修改当前监听的事件列表
-    int handle_pending_channel()；
+    int handle_pending_channel();
     
     //具体实现
     int handle_pending_add(int fd, struct channel *channel);
@@ -47,26 +49,26 @@ private:
     void channel_buffer_nolock(int fd, struct channel *channel1, int type); 
     
     int quit;
-    //hc:去掉了const
-    struct event_dispatcher *eventDispatcher;
+    
+    EventDispatcher *event_dispatcher;
 
     /** 对应的event_dispatcher的数据.设置为*/
     void *event_dispatcher_data;
-    struct channel_map *channelMap;
-
+    //ChannelMap *channel_map;
+    unordered_map<int,Channel*>  channel_map;
 
     //socketPair 是父线程用来通知子线程有新的事件需要处理。
     //pending_head 和 pending_tail 是保留在子线程内的需要处理的新事件
     int is_handle_pending;
-    struct channel_element *pending_head;
-    struct channel_element *pending_tail;
+    ChannelElement *pending_head;
+    ChannelElement *pending_tail;
 
     pthread_t owner_thread_id;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    //socketPair 是父线程用来通知子线程有新的事件需要处理。
+    //socketPair 是父线程用来通知子线程有新的事件需要处理。子reactor初始化就会监听其变化
     int socketPair[2];
-    char *thread_name;
+    string thread_name;
 };
 
 

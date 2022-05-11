@@ -1,6 +1,6 @@
 #ifndef TCP_CONNECTION
 #define TCP_CONNECTION
-
+#include <string>
 #include "event/event_loop.h"
 #include "tcp/channel.h"
 #include "tcp/buffer.h"
@@ -14,7 +14,7 @@ class TcpConnection {
 public:
     TcpConnection(int connected_fd, EventLoop *eventLoop);
 
-    EventLoop *eventLoop;
+    EventLoop *event_loop;
     Channel channel;
     string name;
     Buffer input_buffer;   //接收缓冲区

@@ -2,7 +2,7 @@
 #define EVENT_LOOP_THREAD_H
 
 #include <pthread.h>
-
+#include <string>
 class EventLoopThread {
 public:
     EventLoopThread(int i);
@@ -14,7 +14,7 @@ private:
     pthread_t thread_tid;        /* thread ID */
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    char * thread_name;
+    string thread_name;
     long thread_count;    /* # connections handled */
 };
 

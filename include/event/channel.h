@@ -20,7 +20,7 @@ typedef int (*event_write_callback)(void *data);
 
 class Channel {
 public:
-    Channel(int fd, int events,void *data):fd(fd), events(events),data(data){}
+    Channel(int fd, int events,void *data,event_read_callback eventReadCallback, event_write_callback eventWriteCallback);
 
     int write_event_is_enabled();
 
@@ -34,7 +34,7 @@ private:
 
     event_read_callback eventReadCallback;
     event_write_callback eventWriteCallback;
-    void *data; //callback data, 可能是event_loop，也可能是tcp_server或者tcp_connection
+    void *data; // 可能是event_loop，也可能是tcp_server或者tcp_connection 分别代表唤醒套接字，监听套接字，连接套接字
 };
 
 #endif

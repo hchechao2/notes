@@ -5,19 +5,15 @@
 void ThreadPool::start() {
     assert(!started);
     assertInSameThread(mainLoop);
-
-    started = 1;
-    void *tmp;
-
     if (thread_number <= 0) {
         return;
     }
-    event_loop_threads=new EventLoopThread[thread_number];
-    //eventLoopThreads = malloc(threadPool->thread_number * sizeof(struct event_loop_thread));
-
+    started = 1;
     for (int i = 0; i < thread_number; ++i) {
-        event_loop_thread_init(&threadPool->eventLoopThreads[i], i);
-        event_loop_thread_start(&threadPool->eventLoopThreads[i]);
+        event_loop_threads.emplace_back(i);
+    }
+    for (int i = 0; i < thread_number; ++i) {
+        event_loop_threads[i].start();
     }
 }
 

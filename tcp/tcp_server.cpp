@@ -1,5 +1,9 @@
 #include "tcp_server.h"
 
+TcpServer::TcpServer(EventLoop& event_loop,size_t thread_num,int port)
+    :event_loop(event_loop),acceptor(port),thread_pool(thread_num),port(port),thread_num(thread_num),data(nullptr) {}
+
+//主线程监听listen_fd，有新连接时执行的函数
 int handle_connection_established(void *data) {
     struct TCPserver *tcpServer = (struct TCPserver *) data;
     struct acceptor *acceptor = tcpServer->acceptor;
@@ -12,10 +16,13 @@ int handle_connection_established(void *data) {
 
     yolanda_msgx("new connection established, socket == %d", connected_fd);
 
-    // choose event loop from the thread pool
-    struct event_loop *eventLoop = thread_pool_get_loop(tcpServer->threadPool);
-
-    // create a new tcp connection
+    // 按照顺序从线程池中选择一个eventloop来唤醒
+    EventLoop eventLoop = thread_pool.get_loop();
+    
+    //只有连接套接字才会创建，主线程的监听eventloop不会
+    //为这个新建立套接字创建一个tcp_connection对象，并把应用程序的callback函数设置给这个tcp_connection对象
+    //其中调用do_channel_event，执行wakeup唤醒eventloop
+    
     struct tcp_connection *tcpConnection = tcp_connection_new(connected_fd, eventLoop,
                                                               tcpServer->connectionCompletedCallBack,
                                                               tcpServer->connectionClosedCallBack,
@@ -29,22 +36,21 @@ int handle_connection_established(void *data) {
 }
 
 
-void TcpServer::tcp_server_start() {
+void TcpServer::start() {
 
-    //开启多个线程
+    //初始化并让子线程进入loop等待本地besocket信号
     thread_pool.start();
-    // thread_pool_start(tcpServer->threadPool);
-
+    
     //acceptor主线程， 同时把tcpServer作为参数传给channel对象
     //acceptor 对象表示的是服务器端监听器，acceptor 对象作为一个 channel 对象，注册到 event_loop
-    struct channel *channel = channel_new(acceptor.listen_fd, EVENT_READ, handle_connection_established, 
-                                            NULL,tcpServer);
+    struct channel *channel = channel_new(acceptor.listen_fd, EVENT_READ, tcpServer,handle_connection_established, 
+                                            NULL);
     
-    event_loop_add_channel_event(eventLoop, channel->fd, channel);
+    event_loop.add_channel_event(channel->fd, channel);
 }
 
 
-void TcpServer::tcp_server_set_data(void *data) {
+void TcpServer::set_data(void *data) {
     if (data != nullptr) {
         m_data = data;
     }
