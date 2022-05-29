@@ -1,10 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "event/event_loop.h"
+class EventLoop;
 
-void assertInSameThread(struct event_loop *eventLoop);
+void assertInSameThread(EventLoop & eventLoop);
 
 //1： same thread: 0： not the same thread
-int isInSameThread(struct event_loop *eventLoop);
+int isInSameThread(EventLoop & eventLoop);
 #endif

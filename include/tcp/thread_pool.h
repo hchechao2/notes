@@ -1,29 +1,27 @@
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
 
+#include <vector>
+#include "util/utils.h"
 #include "event/event_loop.h"
 #include "event/event_loop_thread.h"
 
 class ThreadPool {
 public:
-    ThreadPool(EventLoop *mainLoop, int threadNumber)
-        : mainloop(mainLoop),thread_number(threadNumber),
-        started(0),position(0),event_loop_thread(nullptr){}
+    ThreadPool(EventLoop & mainLoop, int threadNumber)
+        : mainLoop(mainLoop),started(0),thread_number(threadNumber),position(0){}
 
-    ~ThreadPool(){
-        if (event_loop_threads!=nullptr)
-            delete[] event_loop_threads;
-    }
+    void start();
+    EventLoop & get_loop();
 private:
     //创建thread_pool的主线程，即tcpserver的eventloop
-    EventLoop *mainLoop;
+    EventLoop & mainLoop;
     //是否已经启动
     int started;
     //线程数目
     int thread_number;
     //数组指针，指向创建的event_loop_thread数组
-    vector<EventLoopThread> event_loop_threads;
-
+    std::vector<EventLoopThread> event_loop_threads;
     //表示在数组里的位置，用来决定选择哪个event_loop_thread服务
     int position;
 
@@ -40,6 +38,5 @@ private:
 // 当我们想让 sub-reactor 线程苏醒时，往管道上发送一个字符就可以了。在 event_loop_init 函数里，
 // 调用了 socketpair 函数创建了套接字对，这个套接字对的作用就是我刚刚说过的，
 // 往这个套接字的一端写时，另外一端就可以感知到读的事件。其实，这里也可以直接使用 UNIX 上的 pipe 管道，作用是一样的。
-
 
 #endif

@@ -1,4 +1,4 @@
-#include "common.h"
+#include "util/c_head.h"
 
 char * sock_ntop(const struct sockaddr_in *sin, socklen_t salen) {
     char portstr[8];
@@ -15,7 +15,7 @@ char * sock_ntop(const struct sockaddr_in *sin, socklen_t salen) {
 }
 
 size_t readn(int fd, void *buffer, size_t size) {
-    char *buffer_pointer = buffer;
+    char *buffer_pointer = reinterpret_cast<char * > (buffer);
     int length = size;
 
     while (length > 0) {
@@ -38,7 +38,7 @@ size_t readn(int fd, void *buffer, size_t size) {
 size_t read_message(int fd, char *buffer, size_t length) {
     u_int32_t msg_length;
     u_int32_t msg_type;
-    int rc;
+    u_int32_t rc;
 
     /* Retrieve the length of the record */
 
@@ -112,12 +112,12 @@ int tcp_server(int port) {
 
     int rt1 = bind(listenfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
     if (rt1 < 0) {
-        error(1, errno, "bind failed ");
+        error(1, errno, (char *)"bind failed ");
     }
 
     int rt2 = listen(listenfd, LISTENQ);
     if (rt2 < 0) {
-        error(1, errno, "listen failed ");
+        error(1, errno, (char *)"listen failed ");
     }
 
     signal(SIGPIPE, SIG_IGN);
@@ -127,7 +127,7 @@ int tcp_server(int port) {
     socklen_t client_len = sizeof(client_addr);
 
     if ((connfd = accept(listenfd, (struct sockaddr *) &client_addr, &client_len)) < 0) {
-        error(1, errno, "bind failed ");
+        error(1, errno, (char *)"bind failed ");
     }
 
     return connfd;
@@ -149,12 +149,12 @@ int tcp_server_listen(int port) {
 
     int rt1 = bind(listenfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
     if (rt1 < 0) {
-        error(1, errno, "bind failed ");
+        error(1, errno, (char *)"bind failed ");
     }
 
     int rt2 = listen(listenfd, LISTENQ);
     if (rt2 < 0) {
-        error(1, errno, "listen failed ");
+        error(1, errno, (char *)"listen failed ");
     }
 
     signal(SIGPIPE, SIG_IGN);
@@ -180,12 +180,12 @@ int tcp_nonblocking_server_listen(int port) {
 
     int rt1 = bind(listenfd, (struct sockaddr *) &server_addr, sizeof(server_addr));
     if (rt1 < 0) {
-        error(1, errno, "bind failed ");
+        error(1, errno, (char *)"bind failed ");
     }
 
     int rt2 = listen(listenfd, LISTENQ);
     if (rt2 < 0) {
-        error(1, errno, "listen failed ");
+        error(1, errno, (char *)"listen failed ");
     }
 
     signal(SIGPIPE, SIG_IGN);
@@ -211,8 +211,106 @@ int tcp_client(char *address, int port) {
     socklen_t server_len = sizeof(server_addr);
     int connect_rt = connect(socket_fd, (struct sockaddr *) &server_addr, server_len);
     if (connect_rt < 0) {
-        error(1, errno, "connect failed ");
+        error(1, errno, (char *)"connect failed ");
     }
 
     return socket_fd;
+}
+
+
+
+void error(int status, int err, char *fmt, ...) {
+    va_list ap;
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    if (err)
+        fprintf(stderr, ": %s (%d)\n", strerror(err), err);
+    if (status)
+        exit(status);
+}
+
+
+// static void err_doit(int errnoflag, int level, const char *fmt, va_list ap) {
+//     int errno_save, n;
+//     char buf[MAXLINE + 1];
+
+//     errno_save = errno;        /* value caller might want printed */
+
+//     vsnprintf(buf, MAXLINE, fmt, ap);    /* safe */
+
+//     n = strlen(buf);
+//     if (errnoflag)
+//         snprintf(buf + n, MAXLINE - n, ": %s", strerror(errno_save));
+//     strcat(buf, "\n");
+
+
+//     fflush(stdout);        /* in case stdout and stderr are the same */
+//     fputs(buf, stderr);
+//     fflush(stderr);
+
+//     return;
+// }
+
+
+void yolanda_log(int severity, const char *msg) {
+    const char *severity_str;
+    switch (severity) {
+        case LOG_DEBUG_TYPE:
+            severity_str = "debug";
+            break;
+        case LOG_MSG_TYPE:
+            severity_str = "msg";
+            break;
+        case LOG_WARN_TYPE:
+            severity_str = "warn";
+            break;
+        case LOG_ERR_TYPE:
+            severity_str = "err";
+            break;
+        default:
+            severity_str = "???";
+            break;
+    }
+    (void) fprintf(stdout, "[%s] %s\n", severity_str, msg);
+
+}
+
+void yolanda_logx(int severity, const char *errstr, const char *fmt, va_list ap)
+{
+    char buf[1024];
+    size_t len;
+
+    if (fmt != NULL)
+        vsnprintf(buf, sizeof(buf), fmt, ap);
+    else
+        buf[0] = '\0';
+
+    if (errstr) {
+        len = strlen(buf);
+        if (len < sizeof(buf) - 3) {
+            snprintf(buf + len, sizeof(buf) - len, ": %s", errstr);
+        }
+    }
+
+    yolanda_log(severity, buf);
+}
+
+void yolanda_msgx(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    yolanda_logx(LOG_MSG_TYPE, NULL, fmt, ap);
+    va_end(ap);
+}
+
+void yolanda_debugx(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    yolanda_logx(LOG_DEBUG_TYPE, NULL, fmt, ap);
+    va_end(ap);
 }
